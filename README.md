@@ -1,121 +1,122 @@
-# Experiment 9 — Spring Boot Employee CRUD Web Application with MySQL
+# Experiment 10 — Real-Time Data Visualization using MongoDB and Spring Boot (Reactive WebFlux & SSE)
 
 ## Aim
-To develop a full-featured web application using Spring Boot and Spring MVC with complete CRUD operations (Create, Read, Update, Delete) to manage employee records persisted in a MySQL database with form validation and Thymeleaf templates.
+To create a reactive web application that integrates MongoDB Change Streams with Spring Boot WebFlux to stream real-time sensor data using Server-Sent Events (SSE) and visualize it dynamically on a live Chart.js dashboard.
 
 ---
 
 ## 1. Project Directory Structure
 
 ```text
-ex09/
-├── pom.xml                                               # Maven dependencies & build settings
+ex10/
+├── pom.xml                                               # Maven dependencies (WebFlux & Reactive Mongo)
 ├── README.md                                             # Execution guide
 └── src/
     └── main/
-        ├── java/com/example/employeecrud/
-        │   ├── EmployeeCrudApplication.java             # Spring Boot Main Application
-        │   ├── controller/
-        │   │   └── EmployeeController.java              # MVC controller handling CRUD web routes
+        ├── java/com/example/realtime/
+        │   ├── RealtimeMongoVisualizationApplication.java # Spring Boot WebFlux Entry Point
+        │   ├── config/
+        │   │   └── DemoDataRunner.java                  # Automatic sensor data simulator (every 2 sec)
         │   ├── model/
-        │   │   └── Employee.java                        # JPA Entity with validation annotations
-        │   └── repo/
-        │       └── EmployeeRepository.java              # Spring Data JPA Repository
+        │   │   └── SensorReading.java                   # MongoDB Document entity
+        │   ├── repo/
+        │   │   └── SensorReadingRepository.java         # Reactive Mongo repository
+        │   └── web/
+        │       └── StreamController.java                # SSE change stream & REST endpoints
         └── resources/
-            ├── application.properties                   # MySQL connection credentials & config
-            └── templates/
-                ├── employee-form.html                   # Thymeleaf form for Add / Edit employee
-                └── employees.html                       # Table displaying all employee records
+            ├── application.properties                   # MongoDB replica set connection URI
+            └── static/
+                └── index.html                           # Live Chart.js dashboard UI
 ```
 
 ---
 
 ## 2. Server & Database Requirements
 
-> [!NOTE]
-> - **External Tomcat Needed? NO.** Spring Boot includes an **embedded Tomcat server**.
-> - **MySQL Service Required:** Ensure MySQL is running on port `3306`.
-> - **Database Auto-Creation:** Handled automatically by `createDatabaseIfNotExist=true` in `application.properties`.
-> - **Password Note:** Default password is `MySQL@123`. If your lab PC has a different MySQL password (or blank `""`), update `spring.datasource.password` in `src/main/resources/application.properties`.
+> [!IMPORTANT]
+> - **External Tomcat Needed? NO.** Spring WebFlux uses **embedded Reactor Netty**. Do not use external Tomcat.
+> - **MongoDB with Replica Set Required:** MongoDB Change Streams **require a replica set** (`rs0`) to read from the operations log (oplog). Running in standard standalone mode without `--replSet rs0` will cause an error!
 
 ---
 
-## 3. How to Run the Application
+## 3. Step-by-Step Execution
 
-### Step 1: Ensure MySQL is Running
+### Step 1: Start MongoDB with Replica Set (Terminal 1)
+Open a Command Prompt window and start MongoDB with the replica set flag:
+
 ```cmd
-net start MySQL80
+mkdir C:\data\db
+mongod --replSet rs0 --dbpath "C:\data\db"
 ```
-*(Or verify MySQL is active in Services / XAMPP / MySQL Workbench)*
+*(Keep this Command Prompt window open and running in the background).*
 
-### Step 2: Launch the App
+---
+
+### Step 2: Initialize the Replica Set (Terminal 2)
+Open a **second Command Prompt** window and run:
+
+```cmd
+mongosh --eval "rs.initiate()"
+```
+
+You should see:
+```json
+{ "ok": 1 }
+```
+*(Once `{ "ok": 1 }` appears, you can close Terminal 2).*
+
+---
+
+### Step 3: Run the Application
 
 #### Option A: Run directly in VS Code (Recommended)
-1. Open folder `c:\Users\Desktop\Lab\IWP\ex09` in VS Code.
-2. Open `src/main/java/com/example/employeecrud/EmployeeCrudApplication.java`.
-3. Click the **`Run`** button that appears right above `public static void main(String[] args)` (or press `F5`).
-4. Look for:
+1. Open folder `c:\Users\Desktop\Lab\IWP\ex10` in VS Code.
+2. Open `src/main/java/com/example/realtime/RealtimeMongoVisualizationApplication.java`.
+3. Click the **`Run`** button visible above `public static void main(String[] args)` (or press `F5`).
+4. Watch the VS Code terminal output:
    ```text
-   Tomcat started on port 8080 (http) with context path '/ex09'
-   Started EmployeeCrudApplication in X.XXX seconds
+   Netty started on port 8080 (http) with context path '/ex10'
+   Started RealtimeMongoVisualizationApplication in X.XXX seconds
    ```
 
 #### Option B: Run via Maven CLI
-Open Command Prompt in `ex09` and run:
+Open Command Prompt in `ex10` and run:
 ```cmd
-cd c:\Users\Desktop\Lab\IWP\ex09
+cd c:\Users\Desktop\Lab\IWP\ex10
 mvn clean package -DskipTests
 mvn spring-boot:run
 ```
 
-*Or execute the packaged JAR:*
+*Or run using the built JAR:*
 ```cmd
-java -jar target\employee-crud-0.0.1-SNAPSHOT.jar
+java -jar target\realtime-mongo-visualization-0.0.1-SNAPSHOT.jar
 ```
 
 ---
 
 ## 4. Run and Test the Application in Browser
 
-### 1. View Employee List (Read)
+### 1. Open the Live Chart Dashboard
 Open your web browser and navigate to:
 ```text
-http://localhost:8080/ex09/employees
+http://localhost:8080/ex10/index.html
 ```
 
-### 2. Add New Employee (Create)
-1. Click **+ Add Employee** or go to:
-   ```text
-   http://localhost:8080/ex09/employees/new
-   ```
-2. Enter valid details:
-   - **Name:** `Sarah Connor`
-   - **Email:** `sarah@example.com`
-   - **Department:** `Engineering`
-   - **Salary:** `75000`
-3. Click **Save**.
-4. The record is inserted into MySQL, and you are redirected to the employee table.
+You will see:
+- **Status Indicator:** Shows **`Live connected`**.
+- **Real-Time Live Chart:** The line chart plots new sensor data automatically every 2 seconds as `DemoDataRunner` feeds simulated data into MongoDB.
 
-### 3. Validation Test
-- Try submitting the form with an empty name or negative salary (e.g. `-500`).
-- The page will display red inline validation errors preventing bad data from entering MySQL.
-
-### 4. Edit Employee (Update)
-1. In the employee table, click **Edit** next to `Sarah Connor`.
-2. Update the salary to `82000` or change department.
-3. Click **Save**.
-4. The updated information is saved to MySQL and displayed in the table.
-
-### 5. Delete Employee (Delete)
-1. Click **Delete** next to an employee record and confirm in the popup.
-2. The record is permanently deleted from MySQL, and the table refreshes.
+### 2. Test Manual Data Insertion
+1. In the input box on the web page, type a value (e.g., `48.5`).
+2. Click **Insert Reading**.
+3. Watch the chart immediately plot a spike at `48.5` as the MongoDB change stream broadcasts the new database event to the browser.
 
 ---
 
-## 5. Stop the Application (When Finished)
+## 5. Stop the Services (When Finished)
 
-- **In VS Code:** Click the red square **Stop** button.
-- **In Terminal:** Press `Ctrl + C` and type `Y`.
+1. **In Spring Boot / VS Code:** Click the red square **Stop** button, or press `Ctrl + C` in the app terminal.
+2. **In MongoDB (Terminal 1):** Press `Ctrl + C` to shut down `mongod`.
 
 ---
 
@@ -123,7 +124,6 @@ http://localhost:8080/ex09/employees
 
 | Error | Cause | Solution |
 | :--- | :--- | :--- |
-| **`Access denied for user 'root'@'localhost'`** | Lab MySQL password is not `MySQL@123`. | Change `spring.datasource.password` in `src/main/resources/application.properties`. |
-| **`Communications link failure`** | MySQL service is not running. | Run `net start MySQL80` or start MySQL from Services / XAMPP. |
-| **`Port 8080 was already in use`** | Another process is occupying port 8080. | Change `server.port=8081` in `application.properties` and browse to `http://localhost:8081/ex09/employees`. |
-| **`404 Not Found`** | Omitted the context path `/ex09`. | Visit `http://localhost:8080/ex09/employees` (not `/employees`). |
+| **`Server at localhost:27017 is not a member of rs0`** | MongoDB was started without `--replSet rs0` or `rs.initiate()` was not run. | Follow Step 1 & Step 2 to start `mongod --replSet rs0` and run `mongosh --eval "rs.initiate()"`. |
+| **`Address already in use` on port 27017** | MongoDB is already running as an automatic Windows service. | Run `net stop MongoDB` in Admin CMD, then restart with `--replSet rs0`. |
+| **`Port 8080 was already in use`** | Another service (Tomcat/Spring Boot) is using port 8080. | In `application.properties`, set `server.port=8081` and visit `http://localhost:8081/ex10/index.html`. |
