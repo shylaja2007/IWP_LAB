@@ -1,26 +1,24 @@
-# Experiment 5 — Servlet-Based Login System with User Authentication (GET & POST)
+# Experiment 6 — User Feedback System using JSP, Sessions, Cookies, and JSTL Tags
 
 ## Aim
-To develop a Java Servlet-based login system that performs user authentication using both `doGet()` and `doPost()` methods, configured using a web deployment descriptor (`web.xml`), and deployed on Apache Tomcat.
+To implement a dynamic web-based feedback system using JavaServer Pages (JSP) incorporating Session Handling, HTTP Cookies, and JSTL core tags (`<c:forEach>`), deployed on Apache Tomcat.
 
 ---
 
 ## 1. Project Directory Structure
 
+Ensure the `ex06` folder contains the following structure:
+
 ```text
-ex05/
-├── login.html                     # HTML Login form
+ex06/
+├── feedback.jsp                   # JSP input form for feedback
+├── submitFeedback.jsp             # JSP processing sessions, cookies, and JSTL
 ├── README.md                      # Execution guide
-├── src/
-│   └── LoginServlet.java          # Java Servlet source code
 └── WEB-INF/
-    ├── web.xml                    # Deployment descriptor
-    ├── lib/
-    │   ├── jakarta.servlet-api.jar
-    │   ├── jakarta.servlet.jsp.jstl-3.0.1.jar
-    │   └── jakarta.servlet.jsp.jstl-api-3.0.0.jar
-    └── classes/
-        └── LoginServlet.class     # Compiled servlet bytecode
+    ├── web.xml                    # Web deployment descriptor
+    └── lib/                       # Jakarta EE JSTL dependencies
+        ├── jakarta.servlet.jsp.jstl-3.0.1.jar
+        └── jakarta.servlet.jsp.jstl-api-3.0.0.jar
 ```
 
 ---
@@ -29,8 +27,8 @@ ex05/
 
 > [!IMPORTANT]
 > **Apache Tomcat 10.x or 11.x is REQUIRED for this experiment.**  
-> Servlets cannot run on VS Code Live Server or standalone Java because they need a Servlet Container.  
-> Note: Must be **Tomcat 10.x or 11.x** (not Tomcat 9) because the code uses modern **Jakarta EE** (`jakarta.servlet.*`).
+> JSP files contain server-side Java directives and JSTL tags that require Tomcat's Jasper JSP compiler.  
+> Note: Must be **Tomcat 10.x or 11.x** to match the modern Jakarta EE JSTL taglib (`jakarta.tags.core`).
 
 ---
 
@@ -38,49 +36,34 @@ ex05/
 
 If your lab uses VS Code with the **Community Server Connectors** extension:
 
-1. **Compile the Servlet:**
-   Open the integrated terminal in VS Code (`Ctrl + \``) and compile:
-   ```cmd
-   cd ex05
-   javac -cp "WEB-INF\lib\jakarta.servlet-api.jar" -d WEB-INF\classes src\LoginServlet.java
-   ```
-
-2. **Add Tomcat to VS Code:**
-   - In VS Code's left sidebar, click the **Servers** icon (or look for the **SERVERS** panel).
+1. **Add Tomcat to VS Code (if not already added):**
+   - Open the **Servers** panel in VS Code's sidebar.
    - Click **Create New Server...** -> Select **Apache Tomcat** -> Choose **Tomcat 10.x** (or 11.x).
-   - Browse and select your Tomcat installation directory (e.g., `C:\apache-tomcat-10.1.x`).
+   - Point to your local Tomcat folder (e.g., `C:\apache-tomcat-10.1.x`).
 
-3. **Deploy `ex05`:**
-   - Right-click your Tomcat server in the **SERVERS** panel -> Select **Add Deployment...**.
-   - Select the `ex05` folder (`c:\Users\Desktop\Lab\IWP\ex05`).
+2. **Deploy `ex06`:**
+   - Right-click your Tomcat server in the **SERVERS** view -> Select **Add Deployment...**.
+   - Select the `ex06` folder (`c:\Users\Desktop\Lab\IWP\ex06`).
 
-4. **Start the Server:**
-   - Right-click Tomcat -> Click **Start Server**.
-   - Watch the server start in the terminal output.
+3. **Start the Server:**
+   - Right-click the server -> Click **Start Server**.
+   - Watch the server initialization logs in the terminal.
 
-5. **Open in Browser:**
-   - Open: `http://localhost:8080/ex05/login.html`
+4. **Open in Browser:**
+   - Open: `http://localhost:8080/ex06/feedback.jsp`
 
 ---
 
 ## 4. Alternative: Run via Command Prompt (Tomcat CLI)
 
-If running outside VS Code via Command Prompt:
-
-### Step 1: Compile the Java Servlet
+### Step 1: Deploy to Apache Tomcat
+Copy the `ex06` folder into Tomcat's `webapps` directory:
 ```cmd
-cd c:\Users\Desktop\Lab\IWP\ex05
-javac -cp "WEB-INF\lib\jakarta.servlet-api.jar" -d WEB-INF\classes src\LoginServlet.java
+xcopy /E /I /Y "c:\Users\Desktop\Lab\IWP\ex06" "%CATALINA_HOME%\webapps\ex06"
 ```
+*(If `%CATALINA_HOME%` is not set, manually copy and paste the `ex06` folder into `C:\apache-tomcat-10.1.x\webapps\ex06`)*
 
-### Step 2: Deploy to Apache Tomcat
-Copy the `ex05` folder into Tomcat's `webapps` directory:
-```cmd
-xcopy /E /I /Y "c:\Users\Desktop\Lab\IWP\ex05" "%CATALINA_HOME%\webapps\ex05"
-```
-*(If `%CATALINA_HOME%` is not set, manually copy the `ex05` folder and paste it into your Tomcat `webapps` directory, e.g. `C:\apache-tomcat-10.1.x\webapps\ex05`)*
-
-### Step 3: Start Apache Tomcat
+### Step 2: Start Apache Tomcat
 ```cmd
 cd %CATALINA_HOME%\bin
 startup.bat
@@ -91,38 +74,44 @@ startup.bat
 
 ## 5. Run and Test the Application
 
-### Test Case 1: HTML Login Form (POST Method)
-1. Open your web browser and go to:
-   ```text
-   http://localhost:8080/ex05/login.html
-   ```
+### 1. Open the Feedback Form
+Open your browser and navigate to:
+```text
+http://localhost:8080/ex06/feedback.jsp
+```
 
-2. **Valid Login:**
-   - Username: `admin`
-   - Password: `12345`
-   - Click **Login**
-   - **Expected Output:**
-     ```text
-     Login Successful! Welcome, admin.
-     ```
+### 2. Submit Feedback 1
+- **Name:** `Alice`
+- **Feedback:** `The course material is very comprehensive!`
+- Click **Submit Feedback**
 
-3. **Invalid Login:**
-   - Username: `admin`
-   - Password: `wrongpassword`
-   - Click **Login**
-   - **Expected Output:**
-     ```text
-     Login Failed! Invalid username or password.
-     Try Again
-     ```
+**Expected Output:**
+```text
+Thank You, Alice!
+Your feedback has been submitted successfully.
 
-### Test Case 2: Direct Servlet Access (GET Method)
-1. In the browser, navigate directly to:
-   ```text
-   http://localhost:8080/ex05/LoginServlet
-   ```
-2. The servlet's `doGet()` method will execute and dynamically render the login page in the browser.
-3. Enter credentials and click **Login** to test the `POST` authentication flow.
+Previous Feedbacks:
+• Alice: The course material is very comprehensive!
+```
+
+### 3. Submit Feedback 2 (Verify Session, Cookies, & JSTL List)
+- Return to `http://localhost:8080/ex06/feedback.jsp`
+- **Name:** `Bob`
+- **Feedback:** `Great hands-on coding exercises.`
+- Click **Submit Feedback**
+
+**Expected Output:**
+```text
+Thank You, Bob!
+Your feedback has been submitted successfully.
+
+Previous Feedbacks:
+• Alice: The course material is very comprehensive!
+• Bob: Great hands-on coding exercises.
+
+Last visitor: Alice
+```
+*(Notice: The cookie displays `Last visitor: Alice` because cookies track the prior visitor from the browser).*
 
 ---
 
@@ -130,14 +119,3 @@ startup.bat
 
 - **In VS Code:** Right-click the server in the Servers panel -> Click **Stop Server**.
 - **In Terminal:** Run `shutdown.bat` from Tomcat's `bin` folder, or close the Tomcat console window.
-
----
-
-## 7. Common Errors & Fixes
-
-| Error | Cause | Solution |
-| :--- | :--- | :--- |
-| **`Cannot POST /LoginServlet`** or **`404`** | Opened `login.html` with VS Code **Live Server** instead of Tomcat. | Servlets require Tomcat. Access via `http://localhost:8080/ex05/login.html`. |
-| **`ClassNotFoundException: jakarta.servlet...`** | Used Tomcat 9.x or older instead of Tomcat 10+. | Use **Apache Tomcat 10.x or 11.x**. |
-| **Tomcat `startup.bat` flashes and closes** | `JAVA_HOME` environment variable is not set. | Set `JAVA_HOME` to your JDK path (e.g., `C:\Java\jdk-17.0.20.1`). |
-| **`package jakarta.servlet does not exist`** | Ran `javac` without the `-cp` flag or outside `ex05`. | Make sure to `cd ex05` and include `-cp "WEB-INF\lib\jakarta.servlet-api.jar"`. |
